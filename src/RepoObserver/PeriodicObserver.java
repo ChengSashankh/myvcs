@@ -1,22 +1,37 @@
-import java.util.*;
-import java.io.*;
-import java.security.*;
+package RepoObserver;
 
-/* Checks for any changes in the directory periodically*/
-class Observer {
-    public static List<File> filesInDirectory;
-    public static List<byte[]> digestForFiles;
-    public static List<byte[]> newDigestForFiles;
-    public static List<File> changedFiles;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-    public static int PORT = 8000;
+/***
+ * Checks for any changes in the directory periodically
+ *
+ * TODO: Implement this class
+ */
+class PeriodicObserver {
+    private static String path;
 
-    public static String path;
+    private static List<File> filesInDirectory;
+    private static List<byte[]> digestForFiles;
+    private static List<byte[]> newDigestForFiles;
+    private static List<Change> changesInDirectory;
+    private static int PORT = 8000;
 
-    public Observer(String path) {
+    public PeriodicObserver(String path) {
         this.path = path;
     }
 
+    /***
+     * TODO: Implement this command.
+     */
     public static void updateFilesInDirectory() {
         File chosenDirectory = new File("/home/sashankh/myvcs/test/");
         for (File file: chosenDirectory.listFiles()) {
@@ -45,45 +60,65 @@ class Observer {
         return newDigestForFiles;
     }
 
-    public static MessageDigest getHashForFile(File file)  throws IOException, FileNotFoundException, NoSuchAlgorithmException {
+    public static MessageDigest getHashForFile(File file) throws IOException, NoSuchAlgorithmException {
         int bytesRead;
         byte[] byteBuffer = new byte[2048];
 
         MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
         BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
         bytesRead = bis.read(byteBuffer);
-        while(bytesRead > 0) {
+
+        while (bytesRead > 0) {
             messageDigest.update(byteBuffer, 0, bytesRead);
             bytesRead = bis.read(byteBuffer);
         }
+
         bis.close();
         return messageDigest;
     }
 
+    /***
+     * Checks for any changes in the directory.
+     *
+     * @return
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     */
     public static boolean checkForChanges() throws IOException, NoSuchAlgorithmException {
         newDigestForFiles = getHashForAllFiles();
         boolean flag = false;
         //System.out.println(digestForFiles.size());
 
         for (int i = 0; i < newDigestForFiles.size(); i++) {
-            if(! Arrays.equals(newDigestForFiles.get(i), digestForFiles.get(i)) ) {
+            if (!Arrays.equals(newDigestForFiles.get(i), digestForFiles.get(i))) {
                 flag = true;
-                Change change = new Change(filesInDirectory.get(i), digestForFiles.get(i), newDigestForFiles.get(i));
-                System.out.println(change.toString());
+                recordChange(i);
             }
         }
 
         return flag;
     }
 
-    public static void sendNotification() {
-        System.out.println("Changes detected\n");
+    public static void recordChange(int i)  throws IOException, NoSuchAlgorithmException {
+        Change change = new Change(filesInDirectory.get(i), digestForFiles.get(i), newDigestForFiles.get(i));
+        changesInDirectory.add(change);
+        sendNotification(change);
+    }
+
+    public static void sendNotification(Change change) {
+        System.out.println("Changes detected\n" + change.toString());
         digestForFiles = newDigestForFiles;
     }
 
+    /***
+     * Runs a periodic observer that logs changes every 2 seconds.
+     *
+     * @param args
+     * @throws IOException
+     */
     public static void main(String[] args) throws IOException {
         filesInDirectory = new ArrayList<File>();
-        changedFiles = new ArrayList<File>();
+        changesInDirectory = new ArrayList<Change>();
 
         System.out.println("Updating directory");
         updateFilesInDirectory();
@@ -92,12 +127,11 @@ class Observer {
         System.out.println(filesInDirectory.toString());
 
         System.out.println("Starting observer..");
-        while(true) {
+        while (true) {
             try {
                 Thread.sleep(2000);
                 if (checkForChanges()) {
                     System.out.println("Checked for changes");
-                    sendNotification();
                 }
             } catch (Exception e) {
                 System.out.println("Found an exception: " + e.toString());
