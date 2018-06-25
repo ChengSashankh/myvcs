@@ -11,7 +11,7 @@ and to experiment with software design patterns.
 
 ### Implementation
 
-The idea is to run myvcs from a simulated shell to manage projects in any directory, without having to store any vcs data in the project directory itself, to allow for multiple version control systems to simulataneously manage the project, should the need be.
+myvcs is intended to run from a simulated shell. Projects in any directory may be managed from here , without having to store any vcs data in the project directory itself. This should allow for non-intrusive version control, so you can simulataneously manage the project with other VCS, should the need be.
 
 ### Is it ready? 
 
